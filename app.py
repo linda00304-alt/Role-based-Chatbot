@@ -55,7 +55,7 @@ ROLES = {
 with st.sidebar:
     st.subheader("⚙️ AI Provider Settings")
     
-    # --- 🤖 AI Provider 선택 (라디오 버튼) ---
+    # --- AI Provider 선택 (라디오 버튼) ---
     provider = st.radio("Choose AI Provider:", ["OpenAI", "Anthropic Claude"])
     
     # 선택한 Provider에 따른 API 키 및 모델 설정
@@ -91,10 +91,14 @@ with st.sidebar:
         sub_option_1 = st.selectbox("Art Movement:", ["Contemporary Art", "Impressionism", "Minimalism / Conceptual", "Surrealism"])
         sub_option_2 = st.selectbox("Exhibition Vibe:", ["Contemplative & Quiet", "Vibrant & Provocative", "Historical & Archive"])
 
-    creativity_level = st.slider(
-        "AI Creativity (Temperature):", 
-        min_value=0.1, max_value=1.5, value=0.7, step=0.1
-    )
+    # OpenAI에서만 사용할 슬라이더 (Claude는 최신 SDK 규격 준수)
+    if provider == "OpenAI":
+        creativity_level = st.slider(
+            "AI Creativity (Temperature):", 
+            min_value=0.1, max_value=1.5, value=0.7, step=0.1
+        )
+    else:
+        creativity_level = 0.7  # Claude용 기본값
 
 st.title("🎭 Role-based Creative Chatbot")
 st.write("Select your AI provider, creative role, and customize your project parameters!")
@@ -130,7 +134,7 @@ if st.button("Generate Response"):
                     )
                     answer_text = resp.choices[0].message.content
 
-                else:  # Anthropic Claude 선택 시
+                else:  # Anthropic Claude 선택 시 (temperature 인자 제거 완료)
                     client = Anthropic(api_key=api_key)
                     message = client.messages.create(
                         model=model,
@@ -138,8 +142,7 @@ if st.button("Generate Response"):
                         system=system_prompt,
                         messages=[
                             {"role": "user", "content": question}
-                        ],
-                        temperature=creativity_level,
+                        ]
                     )
                     answer_text = message.content[0].text
 
