@@ -1,7 +1,7 @@
 import streamlit as st
-from openai import OpenAI
+from anthropic import Anthropic
 
-st.set_page_config(page_title="Role-based Creative Chatbot", page_icon="🎭", layout="wide")
+st.set_page_config(page_title="Role-based Creative Chatbot (Claude)", page_icon="🎭", layout="wide")
 
 ROLES = {
     "🎥 Video Director": {
@@ -52,11 +52,13 @@ ROLES = {
 }
 
 with st.sidebar:
-    st.subheader("🔑 API & Role Settings")
-    api_key = st.text_input("Enter your OpenAI API Key:", type="password", placeholder="sk-xxxxxxxxxxxxxxxxx")
+    st.subheader("🔑 Anthropic API & Role Settings")
+    api_key = st.text_input("Enter your Anthropic API Key:", type="password", placeholder="sk-ant-xxxxxxxxxxxxxxxxx")
     role_name = st.selectbox("Choose a role:", list(ROLES.keys()))
     st.info(ROLES[role_name]["hint"])
-    model = st.selectbox("Model:", ["gpt-4o-mini", "gpt-4o"], index=0)
+    
+    # Claude 모델 선택 (claude-3-5-sonnet 또는 claude-3-opus 등)
+    model = st.selectbox("Model:", ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"], index=0)
     
     st.divider()
     st.subheader(f"🛠️ {role_name.split()[1]} Custom Options")
@@ -80,10 +82,10 @@ with st.sidebar:
 
     creativity_level = st.slider(
         "AI Creativity (Temperature):", 
-        min_value=0.1, max_value=1.5, value=0.8, step=0.1
+        min_value=0.1, max_value=1.0, value=0.7, step=0.1
     )
 
-st.title("🎭 Role-based Creative Chatbot")
+st.title("🎭 Role-based Creative Chatbot (Claude)")
 st.write("Select a creative role and customize your project parameters!")
 
 question = st.text_area(
@@ -93,23 +95,26 @@ question = st.text_area(
 
 if st.button("Generate Response"):
     if not api_key:
-        st.warning("Please enter your OpenAI API key in the sidebar.")
+        st.warning("Please enter your Anthropic API key in the sidebar.")
     elif not question.strip():
         st.warning("Please enter a question or idea.")
     else:
         try:
-            client = OpenAI(api_key=api_key)
+            # Claude 클라이언트 초기화
+            client = Anthropic(api_key=api_key)
             
             # 선택한 옵션들을 시스템 프롬프트에 동적으로 결합
             system_prompt = ROLES[role_name]["system"]
             system_prompt += f" Tailor your expert advice reflecting these specific conditions: [Focus/Genre: {sub_option_1}], [Tone/Mood: {sub_option_2}]."
 
-            with st.spinner("Generating creative insights..."):
-                resp = client.chat.completions.create(
+            with st.spinner("Generating creative insights with Claude..."):
+                # Claude API 호출 방식 적용
+                message = client.messages.create(
                     model=model,
+                    max_tokens=1024,
+                    system=system_prompt,
                     messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": question},
+                        {"role": "user", "content": question}
                     ],
                     temperature=creativity_level,
                 )
@@ -133,8 +138,8 @@ if st.button("Generate Response"):
                 st.markdown(f"### 🖼️ Curatorial Vision: `{sub_option_1}`")
                 st.info(f"💡 **Exhibition Vibe**: {sub_option_2}")
 
-            # AI 응답 출력 영역
-            st.write(resp.choices[0].message.content)
+            # Claude 응답 출력 영역 (content[0].text 형태로 받아옴)
+            st.write(message.content[0].text)
             
         except Exception as e:
             st.error(f"Error: {e}")
